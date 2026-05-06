@@ -1,16 +1,15 @@
 import numpy as np
-from scipy.spatial import cKDTree
+from pykrige.ok import OrdinaryKriging
 
-def idw_interpolation(x, y, z, xi, yi, power=2):
-    """Voert IDW-interpolatie uit op punten."""
-    coords = np.vstack((x, y)).T
-    tree = cKDTree(coords)
+def kriging_interpolation(lons, lats, values, xi, yi):
+    OK = OrdinaryKriging(
+        lons,
+        lats,
+        values,
+        variogram_model="spherical",
+        verbose=False,
+        enable_plotting=False
+    )
 
-    interp_points = np.vstack((xi.flatten(), yi.flatten())).T
-    dist, idx = tree.query(interp_points, k=6)
-
-    weights = 1 / (dist ** power + 1e-12)
-    z_interp = np.sum(weights * z[idx], axis=1) / np.sum(weights, axis=1)
-
-    return z_interp.reshape(xi.shape)
-
+    z, ss = OK.execute("grid", xi[0], yi[:, 0])
+    return z
