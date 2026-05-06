@@ -21,6 +21,7 @@ ensure_shapefile_unzipped()
 df = load_rainfall_data()
 monthly = compute_monthly_totals(df)
 
+# Dropdowns
 years = sorted(monthly["Year"].unique())
 months = sorted(monthly["Month"].unique())
 
@@ -41,10 +42,11 @@ lons = np.linspace(min_lon, max_lon, 100)
 lats = np.linspace(min_lat, max_lat, 100)
 xi, yi = np.meshgrid(lons, lats)
 
+# BELANGRIJK: juiste kolomnaam gebruiken
 raster = idw_interpolation(
     filtered["Longitude"].values,
     filtered["Latitude"].values,
-    filtered["Rainfall"].values,
+    filtered["Rainfall (mm)"].values,
     xi, yi
 )
 
