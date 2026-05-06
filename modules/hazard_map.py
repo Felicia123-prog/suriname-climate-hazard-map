@@ -13,35 +13,34 @@ def create_hazard_map(raster, lons, lats,
     shapefile_path = f"{shapefile_folder}/Distrikten_AdjAOI.shp"
     gdf = gpd.read_file(shapefile_path)
 
-    # Kaart centreren op Suriname
-    center = [
-        gdf.geometry.centroid.y.mean(),
-        gdf.geometry.centroid.x.mean()
-    ]
+    # Bepaal bounding box van jouw data
+    min_lat, max_lat = min(lats), max(lats)
+    min_lon, max_lon = min(lons), max(lons)
 
-    m = folium.Map(location=center, zoom_start=7, tiles="cartodbpositron")
+    # Center van jouw stations
+    center_lat = (min_lat + max_lat) / 2
+    center_lon = (min_lon + max_lon) / 2
 
-    # Raster normaliseren (belangrijk voor zichtbaarheid)
+    # Automatische zoom (werkt heel goed)
+    m = folium.Map(location=[center_lat, center_lon], zoom_start=9, tiles="cartodbpositron")
+
+    # Raster normaliseren
     raster = np.nan_to_num(raster, nan=0.0)
     rmin, rmax = raster.min(), raster.max()
     norm = (raster - rmin) / (rmax - rmin + 1e-9)
 
-    # HeatMap punten genereren
+    # Heatmap punten
     points = []
     for i in range(len(lats)):
         for j in range(len(lons)):
-            lat = float(lats[i])
-            lon = float(lons[j])
-            val = float(norm[i, j])
-            points.append([lat, lon, val])
+            points.append([float(lats[i]), float(lons[j]), float(norm[i, j])])
 
-    # HeatMap toevoegen
     HeatMap(
         points,
-        radius=35,
-        blur=45,
-        max_zoom=7,
-        min_opacity=0.6
+        radius=30,
+        blur=40,
+        max_zoom=12,
+        min_opacity=0.5
     ).add_to(m)
 
     # Districten overlay
