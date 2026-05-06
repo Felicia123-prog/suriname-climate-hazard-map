@@ -8,11 +8,11 @@ from modules.utils import (
     filter_month,
     ensure_shapefile_unzipped
 )
-from modules.interpolation import kriging_interpolation
+from modules.interpolation import rbf_interpolation
 from modules.hazard_map import create_hazard_map
 
 st.title("🌧️ Suriname Climate Hazard Map")
-st.write("Interactieve GIS-kaart met maandelijkse neerslaginterpolatie (Kriging).")
+st.write("Interactieve GIS-kaart met maandelijkse neerslaginterpolatie (RBF).")
 
 # Shapefile klaarzetten
 ensure_shapefile_unzipped()
@@ -38,13 +38,13 @@ if filtered.empty:
 min_lon, max_lon = filtered["Longitude"].min(), filtered["Longitude"].max()
 min_lat, max_lat = filtered["Latitude"].min(), filtered["Latitude"].max()
 
-# Fijn grid voor vloeiende Kriging
+# Fijn grid voor vloeiende RBF
 lons = np.linspace(min_lon, max_lon, 150)
 lats = np.linspace(min_lat, max_lat, 150)
 xi, yi = np.meshgrid(lons, lats)
 
-# KRIGING uitvoeren
-raster = kriging_interpolation(
+# RBF INTERPOLATIE uitvoeren
+raster = rbf_interpolation(
     filtered["Longitude"].values,
     filtered["Latitude"].values,
     filtered["Rainfall (mm)"].values,
