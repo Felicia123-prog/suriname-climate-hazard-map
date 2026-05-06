@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+import zipfile
 
 def load_rainfall_data(folder_path="data/rainfall"):
     """Leest alle Excel-bestanden in de rainfall map in en combineert ze."""
@@ -26,7 +27,10 @@ def compute_monthly_totals(df):
     df["Year"] = df["Date"].dt.year
     df["Month"] = df["Date"].dt.month
 
-    monthly = df.groupby(["StationID", "Latitude", "Longitude", "Year", "Month"])["Rainfall"].sum().reset_index()
+    # BELANGRIJK: juiste kolomnaam gebruiken
+    monthly = df.groupby(
+        ["StationID", "Latitude", "Longitude", "Year", "Month"]
+    )["Rainfall (mm)"].sum().reset_index()
 
     return monthly
 
@@ -34,7 +38,7 @@ def compute_monthly_totals(df):
 def filter_month(df, year, month):
     """Filtert op jaar en maand."""
     return df[(df["Year"] == year) & (df["Month"] == month)]
-import zipfile
+
 
 def ensure_shapefile_unzipped(zip_path="data/shapes/Distrikten_AdjAOI.zip",
                               extract_to="data/shapes"):
@@ -57,4 +61,3 @@ def ensure_shapefile_unzipped(zip_path="data/shapes/Distrikten_AdjAOI.zip",
     # Uitpakken
     with zipfile.ZipFile(zip_path, "r") as z:
         z.extractall(extract_to)
-
