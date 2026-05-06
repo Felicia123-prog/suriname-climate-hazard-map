@@ -1,15 +1,8 @@
 import numpy as np
-from pykrige.ok import OrdinaryKriging
+from scipy.interpolate import Rbf
 
-def kriging_interpolation(lons, lats, values, xi, yi):
-    OK = OrdinaryKriging(
-        lons,
-        lats,
-        values,
-        variogram_model="spherical",
-        verbose=False,
-        enable_plotting=False
-    )
-
-    z, ss = OK.execute("grid", xi[0], yi[:, 0])
+def rbf_interpolation(lons, lats, values, xi, yi):
+    # RBF met multiquadric kernel geeft mooie vloeiende regenvelden
+    rbf = Rbf(lons, lats, values, function='multiquadric', smooth=0.1)
+    z = rbf(xi, yi)
     return z
