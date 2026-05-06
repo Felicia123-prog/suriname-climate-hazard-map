@@ -30,14 +30,18 @@ def create_hazard_map(raster, lons, lats,
     points = []
     for i in range(len(lats)):
         for j in range(len(lons)):
-            points.append([float(lats[i]), float(lons[j]), float(norm[i, j])])
+            lat = float(lats[i])
+            lon = float(lons[j])
+            val = float(norm[i, j])
+            points.append([lat, lon, val])
 
+    # HeatMap toevoegen
     HeatMap(
         points,
-        radius=28,
-        blur=35,
+        radius=35,
+        blur=45,
         max_zoom=7,
-        min_opacity=0.5
+        min_opacity=0.6
     ).add_to(m)
 
     # Districten overlay
