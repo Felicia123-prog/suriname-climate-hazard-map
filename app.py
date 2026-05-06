@@ -52,8 +52,8 @@ raster = idw_interpolation(
 # Kaart genereren
 m = create_hazard_map(raster, lons, lats)
 
-# NIEUWE manier om HTML te tonen
-st.iframe(
-    srcdoc=m._repr_html_(),
+# NIEUWE officiële manier om HTML te tonen
+st.html(
+    m._repr_html_(),
     height=700
 )
