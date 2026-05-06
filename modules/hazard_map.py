@@ -8,12 +8,9 @@ def create_hazard_map(raster, lons, lats,
                       shapefile_folder="data/shapes",
                       shapefile_zip="data/shapes/Distrikten_AdjAOI.zip"):
 
-    # Zorg dat shapefile beschikbaar is (werkt op Streamlit Cloud)
     ensure_shapefile_unzipped(shapefile_zip, shapefile_folder)
 
     shapefile_path = f"{shapefile_folder}/Distrikten_AdjAOI.shp"
-
-    # Shapefile inladen
     gdf = gpd.read_file(shapefile_path)
 
     # Kaart centreren op Suriname
@@ -24,26 +21,33 @@ def create_hazard_map(raster, lons, lats,
 
     m = folium.Map(location=center, zoom_start=7, tiles="cartodbpositron")
 
-    # Raster opschonen (belangrijk voor HeatMap)
-    raster = np.nan_to_num(raster, nan=0.0, posinf=0.0, neginf=0.0)
+    # Raster normaliseren (belangrijk voor zichtbaarheid)
+    raster = np.nan_to_num(raster, nan=0.0)
+    rmin, rmax = raster.min(), raster.max()
+    norm = (raster - rmin) / (rmax - rmin + 1e-9)
 
-    # Raster omzetten naar HeatMap punten
+    # HeatMap punten genereren
     points = []
     for i in range(len(lats)):
         for j in range(len(lons)):
-            value = float(raster[i, j])
-            points.append([lats[i], lons[j], value])
+            points.append([float(lats[i]), float(lons[j]), float(norm[i, j])])
 
-    # HeatMap toevoegen
     HeatMap(
         points,
-        radius=18,
-        blur=25,
+        radius=28,
+        blur=35,
         max_zoom=7,
-        min_opacity=0.4
+        min_opacity=0.5
     ).add_to(m)
 
-    # Districten toevoegen
-    folium.GeoJson(gdf).add_to(m)
+    # Districten overlay
+    folium.GeoJson(
+        gdf,
+        style_function=lambda x: {
+            "fillOpacity": 0,
+            "color": "black",
+            "weight": 1
+        }
+    ).add_to(m)
 
     return m
