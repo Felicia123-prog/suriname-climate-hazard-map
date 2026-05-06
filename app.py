@@ -8,11 +8,11 @@ from modules.utils import (
     filter_month,
     ensure_shapefile_unzipped
 )
-from modules.interpolation import idw_interpolation
+from modules.interpolation import kriging_interpolation
 from modules.hazard_map import create_hazard_map
 
 st.title("🌧️ Suriname Climate Hazard Map")
-st.write("Interactieve GIS-kaart met maandelijkse neerslaginterpolatie.")
+st.write("Interactieve GIS-kaart met maandelijkse neerslaginterpolatie (Kriging).")
 
 # Shapefile klaarzetten
 ensure_shapefile_unzipped()
@@ -34,26 +34,27 @@ if filtered.empty:
     st.warning("Geen data beschikbaar voor deze maand.")
     st.stop()
 
-# Interpolatie grid
+# Interpolatie grid bepalen op basis van jouw stations
 min_lon, max_lon = filtered["Longitude"].min(), filtered["Longitude"].max()
 min_lat, max_lat = filtered["Latitude"].min(), filtered["Latitude"].max()
 
-lons = np.linspace(min_lon, max_lon, 120)
-lats = np.linspace(min_lat, max_lat, 120)
+# Fijn grid voor vloeiende Kriging
+lons = np.linspace(min_lon, max_lon, 150)
+lats = np.linspace(min_lat, max_lat, 150)
 xi, yi = np.meshgrid(lons, lats)
 
-# Interpolatie uitvoeren
-raster = idw_interpolation(
+# KRIGING uitvoeren
+raster = kriging_interpolation(
     filtered["Longitude"].values,
     filtered["Latitude"].values,
     filtered["Rainfall (mm)"].values,
     xi, yi
 )
 
-# Kaart genereren
+# Kaart genereren (met automatische zoom op jouw data)
 m = create_hazard_map(raster, lons, lats)
 
-# FOLIUM HTML TONEN — ENIGE METHODE DIE WERKT
+# FOLIUM HTML TONEN — ENIGE METHODE DIE WERKT OP STREAMLIT CLOUD
 components.html(
     m._repr_html_(),
     height=700,
