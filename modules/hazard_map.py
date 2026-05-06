@@ -24,17 +24,23 @@ def create_hazard_map(raster, lons, lats,
 
     m = folium.Map(location=center, zoom_start=7, tiles="cartodbpositron")
 
+    # Raster opschonen (belangrijk voor HeatMap)
+    raster = np.nan_to_num(raster, nan=0.0, posinf=0.0, neginf=0.0)
+
     # Raster omzetten naar HeatMap punten
     points = []
     for i in range(len(lats)):
         for j in range(len(lons)):
-            points.append([lats[i], lons[j], float(raster[i, j])])
+            value = float(raster[i, j])
+            points.append([lats[i], lons[j], value])
 
+    # HeatMap toevoegen
     HeatMap(
         points,
         radius=18,
         blur=25,
-        max_zoom=7
+        max_zoom=7,
+        min_opacity=0.4
     ).add_to(m)
 
     # Districten toevoegen
