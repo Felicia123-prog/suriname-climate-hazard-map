@@ -1,6 +1,5 @@
 import streamlit as st
 import numpy as np
-import geopandas as gpd
 
 from modules.utils import (
     load_rainfall_data,
@@ -14,7 +13,7 @@ from modules.hazard_map import create_hazard_map
 st.title("🌧️ Suriname Climate Hazard Map")
 st.write("Interactieve GIS-kaart met maandelijkse neerslaginterpolatie.")
 
-# Zorg dat shapefile beschikbaar is (werkt op Streamlit Cloud)
+# Shapefile klaarzetten
 ensure_shapefile_unzipped()
 
 # Data inladen
@@ -38,11 +37,11 @@ if filtered.empty:
 min_lon, max_lon = filtered["Longitude"].min(), filtered["Longitude"].max()
 min_lat, max_lat = filtered["Latitude"].min(), filtered["Latitude"].max()
 
-lons = np.linspace(min_lon, max_lon, 100)
-lats = np.linspace(min_lat, max_lat, 100)
+lons = np.linspace(min_lon, max_lon, 120)
+lats = np.linspace(min_lat, max_lat, 120)
 xi, yi = np.meshgrid(lons, lats)
 
-# BELANGRIJK: juiste kolomnaam gebruiken
+# Interpolatie uitvoeren
 raster = idw_interpolation(
     filtered["Longitude"].values,
     filtered["Latitude"].values,
@@ -53,4 +52,8 @@ raster = idw_interpolation(
 # Kaart genereren
 m = create_hazard_map(raster, lons, lats)
 
-st.components.v1.html(m._repr_html_(), height=700)
+# NIEUWE manier om HTML te tonen
+st.iframe(
+    srcdoc=m._repr_html_(),
+    height=700
+)
