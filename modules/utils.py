@@ -34,4 +34,27 @@ def compute_monthly_totals(df):
 def filter_month(df, year, month):
     """Filtert op jaar en maand."""
     return df[(df["Year"] == year) & (df["Month"] == month)]
+import zipfile
+
+def ensure_shapefile_unzipped(zip_path="data/shapes/Distrikten_AdjAOI.zip",
+                              extract_to="data/shapes"):
+    """Zorgt dat de shapefile uitgepakt is op Streamlit Cloud."""
+    required_files = [
+        "Distrikten_AdjAOI.shp",
+        "Distrikten_AdjAOI.shx",
+        "Distrikten_AdjAOI.dbf",
+        "Distrikten_AdjAOI.prj"
+    ]
+
+    # Check of shapefile al uitgepakt is
+    if all(os.path.exists(os.path.join(extract_to, f)) for f in required_files):
+        return
+
+    # Als ZIP niet bestaat → foutmelding
+    if not os.path.exists(zip_path):
+        raise FileNotFoundError(f"ZIP niet gevonden: {zip_path}")
+
+    # Uitpakken
+    with zipfile.ZipFile(zip_path, "r") as z:
+        z.extractall(extract_to)
 
