@@ -2,12 +2,20 @@ import streamlit as st
 import numpy as np
 import geopandas as gpd
 
-from modules.utils import load_rainfall_data, compute_monthly_totals, filter_month
+from modules.utils import (
+    load_rainfall_data,
+    compute_monthly_totals,
+    filter_month,
+    ensure_shapefile_unzipped
+)
 from modules.interpolation import idw_interpolation
 from modules.hazard_map import create_hazard_map
 
 st.title("🌧️ Suriname Climate Hazard Map")
 st.write("Interactieve GIS-kaart met maandelijkse neerslaginterpolatie.")
+
+# Zorg dat shapefile beschikbaar is (werkt op Streamlit Cloud)
+ensure_shapefile_unzipped()
 
 # Data inladen
 df = load_rainfall_data()
@@ -44,4 +52,3 @@ raster = idw_interpolation(
 m = create_hazard_map(raster, lons, lats)
 
 st.components.v1.html(m._repr_html_(), height=700)
-
