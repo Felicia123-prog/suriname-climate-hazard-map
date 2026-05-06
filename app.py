@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import numpy as np
 
 from modules.utils import (
@@ -52,8 +53,9 @@ raster = idw_interpolation(
 # Kaart genereren
 m = create_hazard_map(raster, lons, lats)
 
-# NIEUWE officiële manier om HTML te tonen
-st.html(
+# FOLIUM HTML TONEN — ENIGE METHODE DIE WERKT
+components.html(
     m._repr_html_(),
-    height=700
+    height=700,
+    scrolling=True
 )
