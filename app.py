@@ -12,7 +12,7 @@ from streamlit.components.v1 import html
 # -------------------------------
 st.set_page_config(layout="wide")
 
-st.title("🌧️ Suriname Klimaat Impactkaart (Max dagneerslag per district)")
+st.title("🌧️ Suriname — Districtsimpactkaart op Basis van Maximale Dagneerslag")
 
 # -------------------------------
 # 1. ZIP UITPAKKEN
