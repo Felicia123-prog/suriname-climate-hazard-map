@@ -149,18 +149,35 @@ folium.GeoJson(
 ).add_to(m)
 
 # -------------------------------
-# 11. MAX-PUNTEN OP DE KAART
+# 11. MAX-PUNTEN OP DE KAART (met locatie-indicator)
 # -------------------------------
 for _, row in max_points.iterrows():
+    lat = row["Latitude"]
+    lon = row["Longitude"]
+    mm = row["Rainfall_mm"]
+    date = row["Date"].date()
+    district = row["DISTR_NAAM"]
+    station = row["StationID"]
+
+    popup_html = (
+        f"<b>{district}</b><br>"
+        f"Station: {station}<br>"
+        f"Datum: {date}<br>"
+        f"Max: {mm} mm<br>"
+        f"Locatie: {lat:.4f}, {lon:.4f}"
+    )
+
+    tooltip_text = f"{mm} mm — {lat:.4f}, {lon:.4f}"
+
     folium.CircleMarker(
-        location=[row["Latitude"], row["Longitude"]],
+        location=[lat, lon],
         radius=8,
         color="red",
         fill=True,
         fill_color="red",
         fill_opacity=0.9,
-        popup=f"{row['DISTR_NAAM']}<br>Station: {row['StationID']}<br>{row['Date'].date()}<br>{row['Rainfall_mm']} mm",
-        tooltip=f"{row['Rainfall_mm']} mm"
+        popup=popup_html,
+        tooltip=tooltip_text
     ).add_to(m)
 
 # -------------------------------
