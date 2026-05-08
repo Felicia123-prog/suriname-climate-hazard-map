@@ -1,22 +1,8 @@
 import streamlit as st
-import geopandas as gpd
+import os
 
-st.title("🔍 Shapefile Kolommen Checker")
+st.title("📂 Bestanden in jouw Streamlit Cloud omgeving")
 
-st.write("We lezen nu jouw district-shapefile in om te zien welke kolommen erin zitten.")
-
-# ---- LAAD DE DISTRICT SHAPEFILE ----
-try:
-    gdf = gpd.read_file("data/shapes/Distrikten_AdjAOI.shp")
-    st.success("Shapefile succesvol geladen!")
-    
-    # Toon kolomnamen
-    st.write("### 📌 Kolommen in jouw shapefile:")
-    st.write(gdf.columns)
-
-    # Toon eerste rijen zodat we de structuur zien
-    st.write("### 📌 Eerste 5 rijen:")
-    st.write(gdf.head())
-
-except Exception as e:
-    st.error(f"Fout bij het laden van de shapefile: {e}")
+for root, dirs, files in os.walk(".", topdown=True):
+    for name in files:
+        st.write(os.path.join(root, name))
