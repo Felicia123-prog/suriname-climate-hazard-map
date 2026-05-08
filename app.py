@@ -7,6 +7,11 @@ import folium
 from folium.features import GeoJsonTooltip
 from streamlit.components.v1 import html
 
+# -------------------------------
+# FULL SCREEN LAYOUT
+# -------------------------------
+st.set_page_config(layout="wide")
+
 st.title("🌧️ Suriname Klimaat Impactkaart (Max dagneerslag per district)")
 
 # -------------------------------
@@ -111,7 +116,7 @@ impact["ImpactClass"] = impact["MaxRain"].apply(classify)
 districts_impact = districts.merge(impact, on="DISTR_NAAM", how="left")
 
 # -------------------------------
-# 9. KAART MAKEN
+# 9. KAART MAKEN (FULL SCREEN)
 # -------------------------------
 m = folium.Map(location=[5.8, -55.2], zoom_start=7)
 
@@ -138,6 +143,6 @@ folium.GeoJson(
 ).add_to(m)
 
 # -------------------------------
-# 10. TONEN IN STREAMLIT
+# 10. TONEN IN STREAMLIT (FULL WIDTH)
 # -------------------------------
-html(m._repr_html_(), height=700)
+html(m._repr_html_(), height=900, width="100%")
