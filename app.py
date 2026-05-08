@@ -1,24 +1,26 @@
 import streamlit as st
 import geopandas as gpd
+import pandas as pd
 import zipfile
 import os
+import folium
+from folium.features import GeoJsonTooltip
+from streamlit.components.v1 import html
 
-st.title("📂 Shapefile Kolommen Checker (ZIP Fix)")
+st.title("🌧️ Suriname Klimaat Impactkaart (Max dagneerslag per district)")
 
-# --- Pad naar jouw ZIP ---
+# -------------------------------
+# 1. ZIP UITPAKKEN
+# -------------------------------
 zip_path = "data/shapes/Distrikten_AdjAOI.zip"
 extract_dir = "data/shapes/extracted"
 
-# --- Stap 1: ZIP uitpakken ---
 if not os.path.exists(extract_dir):
     os.makedirs(extract_dir, exist_ok=True)
-
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(extract_dir)
 
-st.success("ZIP uitgepakt!")
-
-# --- Stap 2: Zoek de shapefile (.shp) ---
+# Zoek shapefile
 shp_file = None
 for root, dirs, files in os.walk(extract_dir):
     for f in files:
@@ -26,21 +28,118 @@ for root, dirs, files in os.walk(extract_dir):
             shp_file = os.path.join(root, f)
 
 if shp_file is None:
-    st.error("Geen .shp bestand gevonden in de ZIP!")
+    st.error("Geen shapefile gevonden!")
     st.stop()
 
-st.write("📌 Gevonden shapefile:", shp_file)
+# -------------------------------
+# 2. SHAPEFILE INLADEN
+# -------------------------------
+districts = gpd.read_file(shp_file)
 
-# --- Stap 3: Shapefile inladen ---
-try:
-    gdf = gpd.read_file(shp_file)
-    st.success("Shapefile succesvol geladen!")
+# -------------------------------
+# 3. REGENVALDATA INLADEN
+# -------------------------------
+df = pd.read_excel("data/rainfall/Rainfall_Data_Suriname_2026.xlsx")
 
-    st.write("### 📌 Kolommen in jouw shapefile:")
-    st.write(gdf.columns)
+# Zorg dat kolomnamen kloppen
+df = df.rename(columns={
+    "Lat": "Latitude",
+    "Lon": "Longitude",
+    "Rainfall": "Rainfall_mm",
+    "Date": "Date"
+})
 
-    st.write("### 📌 Eerste 5 rijen:")
-    st.write(gdf.head())
+df["Date"] = pd.to_datetime(df["Date"])
+df["Year"] = df["Date"].dt.year
+df["Month"] = df["Date"].dt.month
+df["Day"] = df["Date"].dt.day
 
-except Exception as e:
-    st.error(f"Fout bij het laden van de shapefile: {e}")
+# -------------------------------
+# 4. SELECTIE JAAR + MAAND
+# -------------------------------
+years = sorted(df["Year"].unique())
+months = sorted(df["Month"].unique())
+
+year = st.selectbox("Kies jaar", years)
+month = st.selectbox("Kies maand", months)
+
+filtered = df[(df["Year"] == year) & (df["Month"] == month)]
+
+if filtered.empty:
+    st.warning("Geen data voor deze maand.")
+    st.stop()
+
+# -------------------------------
+# 5. SPATIAL JOIN (stations → districten)
+# -------------------------------
+stations = gpd.GeoDataFrame(
+    filtered,
+    geometry=gpd.points_from_xy(filtered["Longitude"], filtered["Latitude"]),
+    crs="EPSG:4326"
+)
+
+# Shapefile heeft waarschijnlijk een ander CRS → converteren
+districts = districts.to_crs("EPSG:4326")
+
+joined = gpd.sjoin(stations, districts, how="left", predicate="within")
+
+# -------------------------------
+# 6. MAX DAGNEERSLAG PER DISTRICT
+# -------------------------------
+impact = (
+    joined.groupby("DISTR_NAAM")["Rainfall_mm"]
+    .max()
+    .reset_index()
+    .rename(columns={"Rainfall_mm": "MaxRain"})
+)
+
+# -------------------------------
+# 7. IMPACTCATEGORIEËN
+# -------------------------------
+def classify(r):
+    if r <= 25:
+        return "Laag"
+    elif r <= 75:
+        return "Matig"
+    elif r <= 150:
+        return "Hoog"
+    else:
+        return "Extreem"
+
+impact["ImpactClass"] = impact["MaxRain"].apply(classify)
+
+# -------------------------------
+# 8. MERGE MET DISTRICT POLYGONEN
+# -------------------------------
+districts_impact = districts.merge(impact, on="DISTR_NAAM", how="left")
+
+# -------------------------------
+# 9. KAART MAKEN
+# -------------------------------
+m = folium.Map(location=[5.8, -55.2], zoom_start=7)
+
+folium.Choropleth(
+    geo_data=districts_impact,
+    data=districts_impact,
+    columns=["DISTR_NAAM", "MaxRain"],
+    key_on="feature.properties.DISTR_NAAM",
+    fill_color="YlGnBu",
+    fill_opacity=0.7,
+    line_opacity=0.4,
+    legend_name="Max dagneerslag (mm)"
+).add_to(m)
+
+# Tooltip
+folium.GeoJson(
+    districts_impact,
+    tooltip=GeoJsonTooltip(
+        fields=["DISTR_NAAM", "MaxRain", "ImpactClass"],
+        aliases=["District", "Max regen (mm)", "Impact"],
+        localize=True
+    )
+).add_to(m)
+
+# -------------------------------
+# 10. TONEN IN STREAMLIT
+# -------------------------------
+html(m._repr_html_(), height=700)
