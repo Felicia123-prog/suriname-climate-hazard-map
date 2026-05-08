@@ -35,18 +35,16 @@ if shp_file is None:
 # 2. SHAPEFILE INLADEN
 # -------------------------------
 districts = gpd.read_file(shp_file)
+districts = districts.to_crs("EPSG:4326")  # CRS fix
 
 # -------------------------------
 # 3. REGENVALDATA INLADEN
 # -------------------------------
 df = pd.read_excel("data/rainfall/Rainfall_Data_Suriname_2026.xlsx")
 
-# Zorg dat kolomnamen kloppen
+# Kolom hernoemen zodat we een uniforme naam hebben
 df = df.rename(columns={
-    "Lat": "Latitude",
-    "Lon": "Longitude",
-    "Rainfall": "Rainfall_mm",
-    "Date": "Date"
+    "Rainfall (mm)": "Rainfall_mm"
 })
 
 df["Date"] = pd.to_datetime(df["Date"])
@@ -78,9 +76,6 @@ stations = gpd.GeoDataFrame(
     crs="EPSG:4326"
 )
 
-# Shapefile heeft waarschijnlijk een ander CRS → converteren
-districts = districts.to_crs("EPSG:4326")
-
 joined = gpd.sjoin(stations, districts, how="left", predicate="within")
 
 # -------------------------------
@@ -97,6 +92,8 @@ impact = (
 # 7. IMPACTCATEGORIEËN
 # -------------------------------
 def classify(r):
+    if pd.isna(r):
+        return "Geen data"
     if r <= 25:
         return "Laag"
     elif r <= 75:
@@ -126,6 +123,7 @@ folium.Choropleth(
     fill_color="YlGnBu",
     fill_opacity=0.7,
     line_opacity=0.4,
+    nan_fill_color="lightgray",
     legend_name="Max dagneerslag (mm)"
 ).add_to(m)
 
