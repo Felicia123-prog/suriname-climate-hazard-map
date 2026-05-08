@@ -40,14 +40,13 @@ if shp_file is None:
 # 2. SHAPEFILE INLADEN
 # -------------------------------
 districts = gpd.read_file(shp_file)
-districts = districts.to_crs("EPSG:4326")  # CRS fix
+districts = districts.to_crs("EPSG:4326")
 
 # -------------------------------
 # 3. REGENVALDATA INLADEN
 # -------------------------------
 df = pd.read_excel("data/rainfall/Rainfall_Data_Suriname_2026.xlsx")
 
-# Kolom hernoemen zodat we een uniforme naam hebben
 df = df.rename(columns={
     "Rainfall (mm)": "Rainfall_mm"
 })
@@ -116,10 +115,17 @@ impact["ImpactClass"] = impact["MaxRain"].apply(classify)
 districts_impact = districts.merge(impact, on="DISTR_NAAM", how="left")
 
 # -------------------------------
-# 9. KAART MAKEN (FULL SCREEN)
+# 9. MAX-PUNTEN VINDEN
+# -------------------------------
+idx = joined.groupby("DISTR_NAAM")["Rainfall_mm"].idxmax()
+max_points = joined.loc[idx]
+
+# -------------------------------
+# 10. KAART MAKEN (FULL SCREEN)
 # -------------------------------
 m = folium.Map(location=[5.8, -55.2], zoom_start=7)
 
+# Choropleth
 folium.Choropleth(
     geo_data=districts_impact,
     data=districts_impact,
@@ -132,7 +138,7 @@ folium.Choropleth(
     legend_name="Max dagneerslag (mm)"
 ).add_to(m)
 
-# Tooltip
+# Tooltip voor districten
 folium.GeoJson(
     districts_impact,
     tooltip=GeoJsonTooltip(
@@ -143,6 +149,21 @@ folium.GeoJson(
 ).add_to(m)
 
 # -------------------------------
-# 10. TONEN IN STREAMLIT (FULL WIDTH)
+# 11. MAX-PUNTEN OP DE KAART
+# -------------------------------
+for _, row in max_points.iterrows():
+    folium.CircleMarker(
+        location=[row["Latitude"], row["Longitude"]],
+        radius=8,
+        color="red",
+        fill=True,
+        fill_color="red",
+        fill_opacity=0.9,
+        popup=f"{row['DISTR_NAAM']}<br>Station: {row['StationID']}<br>{row['Date'].date()}<br>{row['Rainfall_mm']} mm",
+        tooltip=f"{row['Rainfall_mm']} mm"
+    ).add_to(m)
+
+# -------------------------------
+# 12. TONEN IN STREAMLIT (FULL WIDTH)
 # -------------------------------
 html(m._repr_html_(), height=900, width="100%")
