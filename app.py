@@ -115,10 +115,16 @@ impact["ImpactClass"] = impact["MaxRain"].apply(classify)
 districts_impact = districts.merge(impact, on="DISTR_NAAM", how="left")
 
 # -------------------------------
-# 9. MAX-PUNTEN VINDEN
+# 9. MAX-PUNTEN VINDEN (ROBUUST)
 # -------------------------------
-idx = joined.groupby("DISTR_NAAM")["Rainfall_mm"].idxmax()
-max_points = joined.loc[idx]
+valid = joined.dropna(subset=["Rainfall_mm"])
+
+if valid.empty:
+    st.warning("Geen geldige neerslagdata beschikbaar voor deze maand.")
+    max_points = pd.DataFrame()
+else:
+    idx = valid.groupby("DISTR_NAAM")["Rainfall_mm"].idxmax()
+    max_points = valid.loc[idx]
 
 # -------------------------------
 # 10. KAART MAKEN (FULL SCREEN)
@@ -149,7 +155,7 @@ folium.GeoJson(
 ).add_to(m)
 
 # -------------------------------
-# 11. MAX-PUNTEN OP DE KAART (met locatie-indicator)
+# 11. MAX-PUNTEN OP DE KAART
 # -------------------------------
 for _, row in max_points.iterrows():
     lat = row["Latitude"]
@@ -181,6 +187,6 @@ for _, row in max_points.iterrows():
     ).add_to(m)
 
 # -------------------------------
-# 12. TONEN IN STREAMLIT (FULL WIDTH)
+# 12. TONEN IN STREAMLIT
 # -------------------------------
 html(m._repr_html_(), height=900, width="100%")
