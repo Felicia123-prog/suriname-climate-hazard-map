@@ -4,7 +4,6 @@ import pandas as pd
 import zipfile
 import os
 import folium
-from folium.features import GeoJsonTooltip
 from streamlit.components.v1 import html
 
 # -------------------------------
@@ -12,7 +11,7 @@ from streamlit.components.v1 import html
 # -------------------------------
 st.set_page_config(layout="wide")
 
-st.title("🌧️ Suriname — Districtsimpactkaart op Basis van Maximale Dagneerslag")
+st.title("🌧️ Suriname — Impactzones op Basis van Maximale Dagneerslag")
 
 # -------------------------------
 # 1. ZIP UITPAKKEN
@@ -47,10 +46,7 @@ districts = districts.to_crs("EPSG:4326")
 # -------------------------------
 df = pd.read_excel("data/rainfall/Rainfall_Data_Suriname_2026.xlsx")
 
-df = df.rename(columns={
-    "Rainfall (mm)": "Rainfall_mm"
-})
-
+df = df.rename(columns={"Rainfall (mm)": "Rainfall_mm"})
 df["Date"] = pd.to_datetime(df["Date"])
 df["Year"] = df["Date"].dt.year
 df["Month"] = df["Date"].dt.month
@@ -85,38 +81,6 @@ joined = gpd.sjoin(stations, districts, how="left", predicate="within")
 # -------------------------------
 # 6. MAX DAGNEERSLAG PER DISTRICT
 # -------------------------------
-impact = (
-    joined.groupby("DISTR_NAAM")["Rainfall_mm"]
-    .max()
-    .reset_index()
-    .rename(columns={"Rainfall_mm": "MaxRain"})
-)
-
-# -------------------------------
-# 7. IMPACTCATEGORIEËN
-# -------------------------------
-def classify(r):
-    if pd.isna(r):
-        return "Geen data"
-    if r <= 25:
-        return "Laag"
-    elif r <= 75:
-        return "Matig"
-    elif r <= 150:
-        return "Hoog"
-    else:
-        return "Extreem"
-
-impact["ImpactClass"] = impact["MaxRain"].apply(classify)
-
-# -------------------------------
-# 8. MERGE MET DISTRICT POLYGONEN
-# -------------------------------
-districts_impact = districts.merge(impact, on="DISTR_NAAM", how="left")
-
-# -------------------------------
-# 9. MAX-PUNTEN VINDEN (ROBUUST)
-# -------------------------------
 valid = joined.dropna(subset=["Rainfall_mm"])
 
 if valid.empty:
@@ -127,36 +91,15 @@ else:
     max_points = valid.loc[idx]
 
 # -------------------------------
-# 10. KAART MAKEN (FULL SCREEN)
+# 7. KAART MAKEN (FULL SCREEN)
 # -------------------------------
 m = folium.Map(location=[5.8, -55.2], zoom_start=7)
 
-# Choropleth
-folium.Choropleth(
-    geo_data=districts_impact,
-    data=districts_impact,
-    columns=["DISTR_NAAM", "MaxRain"],
-    key_on="feature.properties.DISTR_NAAM",
-    fill_color="YlGnBu",
-    fill_opacity=0.7,
-    line_opacity=0.4,
-    nan_fill_color="lightgray",
-    legend_name="Max dagneerslag (mm)"
-).add_to(m)
-
-# Tooltip voor districten
-folium.GeoJson(
-    districts_impact,
-    tooltip=GeoJsonTooltip(
-        fields=["DISTR_NAAM", "MaxRain", "ImpactClass"],
-        aliases=["District", "Max regen (mm)", "Impact"],
-        localize=True
-    )
-).add_to(m)
-
 # -------------------------------
-# 11. MAX-PUNTEN OP DE KAART
+# 8. IMPACTCIRKELS (15 km radius)
 # -------------------------------
+radius_m = 15000  # 15 km
+
 for _, row in max_points.iterrows():
     lat = row["Latitude"]
     lon = row["Longitude"]
@@ -173,8 +116,18 @@ for _, row in max_points.iterrows():
         f"Locatie: {lat:.4f}, {lon:.4f}"
     )
 
-    tooltip_text = f"{mm} mm — {lat:.4f}, {lon:.4f}"
+    # Grote impactcirkel
+    folium.Circle(
+        location=[lat, lon],
+        radius=radius_m,
+        color="red",
+        fill=True,
+        fill_color="red",
+        fill_opacity=0.15,
+        popup=popup_html
+    ).add_to(m)
 
+    # Punt zelf
     folium.CircleMarker(
         location=[lat, lon],
         radius=8,
@@ -182,11 +135,10 @@ for _, row in max_points.iterrows():
         fill=True,
         fill_color="red",
         fill_opacity=0.9,
-        popup=popup_html,
-        tooltip=tooltip_text
+        tooltip=f"{mm} mm"
     ).add_to(m)
 
 # -------------------------------
-# 12. TONEN IN STREAMLIT
+# 9. TONEN IN STREAMLIT
 # -------------------------------
 html(m._repr_html_(), height=900, width="100%")
